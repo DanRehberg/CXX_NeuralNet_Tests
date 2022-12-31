@@ -160,8 +160,6 @@ int main()
 	catch (...)
 	{
 	}
-}
-
 	char wait = 'n';
 	std::cin >> wait;
 
