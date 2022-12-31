@@ -208,7 +208,7 @@ void IntegerMatrix::parallelTrialC0AltAlt(std::mutex& m, unsigned int start, uns
 	unsigned int indexA = cDiv * dotSize + tModS;// (c / dotSize)* dotSize + tModS;
 	unsigned int indexB = cMod + tModS * dotSize;// (c % dotSize) + tModS * dotSize;
 	unsigned int cur = indexA % dotSize;
-	float count = 0.0f;
+	int count = 0;
 	for (unsigned int i = start; i < end; ++i)
 	{
 		++indexA;
