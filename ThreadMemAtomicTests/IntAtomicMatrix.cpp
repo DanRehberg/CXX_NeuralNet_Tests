@@ -1,6 +1,6 @@
 /*
 Author: Dan Rehberg
-Modified Date: 12/20/2022
+Modified Date: 1/3/2023
 */
 #include "IntAtomicMatrix.hpp"
 
@@ -9,6 +9,7 @@ IntegerMatrix* IntegerMatrix::mA = nullptr;
 IntegerMatrix* IntegerMatrix::mB = nullptr;
 IntegerMatrix IntegerMatrix::mC = IntegerMatrix(1, 1);
 AtomicMatrix IntegerMatrix::atom = std::move(AtomicMatrix(1, 1));
+unsigned int IntegerMatrix::atomSize = 0;
 
 IntegerMatrix::IntegerMatrix() : rows(0), columns(0), capacity(0), data(nullptr)
 {
@@ -170,7 +171,7 @@ void IntegerMatrix::setParallelMatrixOps(IntegerMatrix& matA, IntegerMatrix& mat
 		mC = IntegerMatrix(matA.rows, matB.columns);
 		//Object for the atomic testing
 		atom = std::move(AtomicMatrix(matA.rows, matB.columns));
-		//Third test for case C atomics
+		atomSize = matA.rows * matB.columns;
 	}
 }
 
@@ -229,7 +230,47 @@ void IntegerMatrix::parallelTrialC0AltAlt(std::mutex& m, unsigned int start, uns
 
 		count += A.data[indexA] * B.data[indexB];
 	}
-	atom.data[c].fetch_add(static_cast<int>(count), std::memory_order_relaxed);
+	atom.data[c].fetch_add(count, std::memory_order_relaxed);
+}
+void IntegerMatrix::parallelTrialC0AltAltAlt(std::mutex& m, unsigned int start, unsigned int end)
+{
+	IntegerMatrix& A = *mA;
+	IntegerMatrix& B = *mB;
+	unsigned int dotSize = A.columns;
+	unsigned int c = start / dotSize;//index into the C data
+	unsigned int baseA = c / B.columns;// *dotSize;//starting row index for A data
+	unsigned int baseB = c - (baseA * dotSize);// c% B.columns;//starting column index for B data
+	baseA *= dotSize;//Removed calculation in declaration to use data to avoid modulus above (no noticable performance change as it occurs once per thread..)
+	unsigned int counter = start - (c * dotSize);//starting position in a dot product (reset per new dot product)
+	unsigned int indexA = baseA + counter;
+	unsigned int indexB = baseB + counter * B.columns;
+	int sum = 0;
+	for (unsigned int i = start; i < end; ++i)
+	{
+		sum += A.data[indexA] * B.data[indexB];
+		if (++counter == dotSize)
+		{
+			counter = 0;
+			if (++baseB == B.columns)
+			{
+				baseA += dotSize;
+				baseB = 0;
+			}
+			indexA = baseA;
+			indexB = baseB;
+			atom.data[c++].fetch_add(sum, std::memory_order_relaxed);
+			sum = 0;
+		}
+		else
+		{
+			++indexA;
+			indexB += B.columns;
+		}
+	}
+	if (c < atomSize)
+	{
+		atom.data[c].fetch_add(sum, std::memory_order_relaxed);
+	}
 }
 
 void IntegerMatrix::deepCopy(const IntegerMatrix& cp, bool allocate)
