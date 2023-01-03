@@ -1,6 +1,6 @@
 /*
 Author: Dan Rehberg
-Date: 12/20/2022
+Date Modified: 1/3/2023
 */
 
 #ifndef __INT_ATOMIC_MATRIX__
@@ -67,9 +67,10 @@ public:
 	static void setParallelMatrixOps(IntegerMatrix& matA, IntegerMatrix& matB, bool multiplication = true);
 	//static void parallelTrialC0AltAlt(MemoryTest& mem, std::mutex& m, unsigned int taskIndex);
 	static void parallelTrialC0AltAlt(std::mutex& m, unsigned int startTask, unsigned int endTask);
+	static void parallelTrialC0AltAltAlt(std::mutex& m, unsigned int startTask, unsigned int endTask);
 private:
 	static IntegerMatrix* mA, * mB, mC, mD;//C is a resultant, so no pointers; mD is a temporary for the log base 2 dispatch
-	static unsigned int M, N, rI, cJ, curN, curItr;
+	static unsigned int atomSize;
 	static AtomicMatrix atom;//for the atomic multiplication tests
 	unsigned int rows, columns;//length of 2D matrix
 	unsigned int capacity;//total cardinality of the 2D matrix
